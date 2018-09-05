@@ -35,6 +35,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - heditor
+    - safe
     - tasty
     - tasty-hunit
     - tasty-smallcheck

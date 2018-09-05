@@ -14,7 +14,7 @@ unitTests = testGroup "Unit tests" $
     [ testGroup "Scanner" $
         [ testCase "scanFile" $ do
             result <- scanFile "test/input/temp1.txt"
-            result @?= 30
+            result @?= ["30"] 
             pure ()
         ]
     ]

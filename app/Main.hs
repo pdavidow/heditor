@@ -1,6 +1,7 @@
 module Main where
 
-import Lib
+import Scanner (scanFile)
 
 main :: IO ()
-main = someFunc
+main = 
+    scanFile "test/input/test_input_good_1.txt"
