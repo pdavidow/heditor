@@ -2,10 +2,10 @@ module Scanner
     ( scanFile
     )
     where
-
-import Safe (headMay, tailMay) 
+import Debug.Trace (trace, traceIO, traceM)
+import Safe (atMay, headMay, tailMay) 
 import Text.Read (readMaybe)
-
+import Data.Text (dropEnd, pack, takeEnd, unpack)
 
 newtype OpAppend = OpAppend String deriving (Eq, Show)
 newtype OpDelete = OpDelete Int deriving (Eq, Show)
@@ -14,7 +14,7 @@ data OpUndo = OpUndo deriving (Eq, Show)
 newtype OpUndoAppend = OpUndoAppend Int deriving (Eq, Show)
 newtype OpUndoDelete = OpUndoDelete String deriving (Eq, Show)
 
-data Tagged_Operation
+data Tagged_Operation -- todo include lineNums to give better error msgs
     = Tagged_OpAppend OpAppend 
     | Tagged_OpDelete OpDelete 
     | Tagged_OpPrint OpPrint 
@@ -33,18 +33,23 @@ data Model = Model
     , _undos :: [Model_Undo]
     , _appendageLengthSum :: Int
     , _charDeleteCountSum :: Int
+    , _printOutput :: String
     }
 
     
 initialModel :: Model
 initialModel = 
-    Model "" [] 0 0
+    Model "" [] 0 0 ""
 
 
-opcodeAppend = 1 :: Int
-opcodeDelete = 2 :: Int
-opcodePrint  = 3 :: Int
-opcodeUndo   = 4 :: Int
+-- opcodeAppend = 1 
+-- opcodeDelete = 2 
+-- opcodePrint  = 3
+-- opcodeUndo   = 4 
+
+opCount_UpperLimit            = 1000000
+appendageLengthSum_UpperLimit = 1000000
+charDeleteCountSum_UpperLimit = 2000000
 
 
 scanFile :: FilePath -> FilePath -> IO ()
@@ -57,10 +62,10 @@ scanFile input output = do
                 Just opCount ->
                     case tailMay lines of
                         Just opLines -> do
-                            let eiResult = parseOps opCount opLines
-                            case eiResult of
-                                Right result ->
-                                    --writeTo output result
+                            let eiModel = parseOps opCount opLines
+                            case eiModel of
+                                Right model -> do
+                                    writeFile output $ _printOutput model
                                     pure ()
                                 Left err ->
                                     putStrLn err
@@ -79,19 +84,20 @@ getLines x = do
     pure $ lines contents    
 
 
-parseOps :: Int -> [Line] -> Either String String
-parseOps opCount xs = do
+parseOps :: Int -> [Line] -> Either String Model
+parseOps opCount xs = 
     case opCount == length xs of
-        True -> do
-            let numberedLines = zip [(2 :: Int)..] xs 
-            let eiOps = parseCleanOps [] numberedLines
+        True -> 
+            let 
+                numberedLines = zip [(2 :: Int)..] xs 
+                eiOps = parseCleanOps [] numberedLines
+            in
+                case eiOps of
+                    Right ops ->
+                        performOps initialModel ops
 
-            case eiOps of
-                Right ops ->
-                    Right $ _string $ performOps initialModel ops
-
-                Left err -> do
-                    Left err
+                    Left err -> do
+                        Left err
 
         False -> do
             Left "Operation count (from line 1) does not match actual"          
@@ -107,30 +113,144 @@ parseCleanOps acc (numberedLine : xs) =
         case eiOp of
             Right op ->
                 parseCleanOps (acc ++ [op]) xs
-            Left _ -> 
-                eiOp
-    
-
-performOps :: Model -> [Tagged_Operation] -> Model
-performOps model ops =
-    model
+            Left err -> 
+                Left err
 
 
-performOp numberedLine = do
-    let eiTaggedOp = parseOp numberedLine
-    case eiTaggedOp of
-        Right taggedOp ->
+performOps :: Model -> [Tagged_Operation] -> Either String Model
+performOps model [] =
+    Right model
+performOps model (op : xs) =
+    case op of
+        Tagged_OpAppend (OpAppend appendage) ->
+            let
+                len = length appendage
+                sum = _appendageLengthSum model + len
+            in
+                case sum <= appendageLengthSum_UpperLimit of
+                    True ->
+                        let
+                            model' =
+                                Model
+                                    (_string model ++ appendage)
+                                    (_undos model ++ [Model_OpUndoAppend $ OpUndoAppend len])
+                                    sum
+                                    (_charDeleteCountSum model)
+                                    (_printOutput model)
+                        in
+                            performOps model' xs
 
-            pure ()
+                    False ->
+                        Left $ "The sum of the lengths of all appendage arguments (for Append) must be <= " ++ show appendageLengthSum_UpperLimit ++ ", but instead is " ++ show sum
+        
+        Tagged_OpDelete (OpDelete charsToDelete_Count) ->
+            let
+                sum = _charDeleteCountSum model + charsToDelete_Count
+                len = length $ _string model
+                appendage = unpack $ takeEnd charsToDelete_Count $ pack $ _string model
+            in
+                if sum > charDeleteCountSum_UpperLimit then
+                    Left $ "The total char delete count (for Delete) must be <= " ++ show charDeleteCountSum_UpperLimit ++ ", but instead is " ++ show sum
+                else if len == 0 then
+                    Left $ "String may not be empty"
+                else if charsToDelete_Count == 0 || charsToDelete_Count > len then
+                    Left $ "1 <= count <= string length"
+                else
+                    let
+                        model' =
+                            Model
+                                (unpack $ dropEnd charsToDelete_Count $ pack $ _string model)
+                                (_undos model ++ [Model_OpUndoDelete $ OpUndoDelete appendage])
+                                (_appendageLengthSum model)
+                                sum
+                                (_printOutput model)
+                    in
+                        performOps model' xs
 
-        Left err ->
-            putStrLn err
+        Tagged_OpPrint (OpPrint pos) ->
+                case ((pos - 1) <= (length $ _string model)) of
+                    True ->
+                        let
+                            model' =
+                                Model            
+                                    (_string model)
+                                    (_undos model)
+                                    (_appendageLengthSum model)
+                                    (_charDeleteCountSum model)
+                                    (_printOutput model ++ [_string model !! (pos - 1)] ++ "\n") -- safe
+                        in
+                            performOps model' xs
+
+                    False ->
+                        Left $ "Char position for Print exceeds string length"
+
+        Tagged_OpUndo _ ->
+            case null $ _undos model of
+                True ->
+                    performOps model xs
+
+                False ->
+                    let
+                        tagged = case last $ _undos model of
+                            Model_OpUndoAppend x -> Tagged_OpUndoAppend x
+                            Model_OpUndoDelete x -> Tagged_OpUndoDelete x
+                        eiModel = performOps model [tagged]
+                    in
+                        case eiModel of
+                            Right model' ->
+                                let 
+                                    model'' = 
+                                        Model
+                                            (_string model')
+                                            (init $ _undos model')
+                                            (_appendageLengthSum model')
+                                            (_charDeleteCountSum model')
+                                            (_printOutput model')        
+                                in
+                                    performOps model'' xs
+                            Left _ ->
+                                eiModel
+
+        Tagged_OpUndoAppend (OpUndoAppend charsToDelete_Count) -> -- todo refactor w/ Tagged_OpDelete
+            let
+                len = length $ _string model
+            in
+                if len == 0 then
+                    Left $ "String may not be empty"
+                else if charsToDelete_Count == 0 || charsToDelete_Count > len then
+                    Left $ "1 <= count <= string length"
+                else
+                    let
+                        model' =
+                            Model
+                                (unpack $ dropEnd charsToDelete_Count $ pack $ _string model)
+                                (_undos model)
+                                (_appendageLengthSum model)
+                                (_charDeleteCountSum model)
+                                (_printOutput model)
+                    in
+                        performOps model' xs
+
+        Tagged_OpUndoDelete (OpUndoDelete appendage) -> -- todo refactor w/ Append above
+            let
+                len = length appendage
+            in
+                let
+                    model' =
+                        Model
+                            (_string model ++ appendage)
+                            (_undos model)
+                            (_appendageLengthSum model)
+                            (_charDeleteCountSum model)
+                            (_printOutput model)
+                in
+                    performOps model' xs
 
 
 -- todo refactor
 parseOp :: (Int, Line) -> Either String Tagged_Operation
 parseOp (n, line) = do
-    let tokens = words line
+    let tokens = words line 
     let tokenLength = length tokens
     case tokenLength > 0 of
         True -> do
@@ -138,22 +258,17 @@ parseOp (n, line) = do
             case mbOpCode of
                 Just opCode ->
                     case opCode of
-                        opcodeAppend ->
-                            case tailMay tokens of
-                                Just args ->
+                        1 ->
+                            case tailMay tokens of 
+                                Just args ->                                    
                                     case length args == 1 of
                                         True -> do
-                                            let mbArg = readMaybe $ head args :: Maybe String -- safe head
-                                            case mbArg of
-                                                Just arg -> 
-                                                    Right $ Tagged_OpAppend $ OpAppend arg
-                                                Nothing -> 
-                                                    Left $ errorWithLineNum n "Append has one string arg"
+                                            Right $ Tagged_OpAppend $ OpAppend $ head args
                                         False ->
                                             Left $ errorWithLineNum n "Append has one arg"  
                                 Nothing ->
                                     Left $ errorWithLineNum n "Append has one arg"   
-                        opcodeDelete ->
+                        2 ->
                             case tailMay tokens of
                                 Just args ->
                                     case length args == 1 of
@@ -168,7 +283,7 @@ parseOp (n, line) = do
                                             Left $ errorWithLineNum n "Delete has one arg"  
                                 Nothing ->
                                     Left $ errorWithLineNum n "Delete has one arg"                             
-                        opcodePrint ->
+                        3 ->
                             case tailMay tokens of
                                 Just args ->
                                     case length args == 1 of
@@ -183,7 +298,7 @@ parseOp (n, line) = do
                                             Left $ errorWithLineNum n "Print has one arg"  
                                 Nothing ->
                                     Left $ errorWithLineNum n "Print has one arg"                               
-                        opcodeUndo ->
+                        4 ->
                             case tokenLength == 1 of
                                 True ->
                                     Right $ Tagged_OpUndo $ OpUndo
@@ -200,8 +315,3 @@ parseOp (n, line) = do
 errorWithLineNum :: Int -> String -> String
 errorWithLineNum lineNum error =
     error ++ ", line " ++ show lineNum
-
-
--- makeOp :: Int -> [String] -> IO (Either String Operation)
--- makeOp opCode tokens = do
---     let argType = case

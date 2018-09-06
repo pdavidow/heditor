@@ -36,6 +36,7 @@ executables:
     dependencies:
     - heditor
     - safe
+    - text
     - tasty
     - tasty-hunit
     - tasty-smallcheck
