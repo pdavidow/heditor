@@ -1,3 +1,7 @@
+**_Rewrite of SimpleEditor in Haskell_**
+
+==================================================
+
 **THE PROBLEM**
 
 **Problem Statement**
