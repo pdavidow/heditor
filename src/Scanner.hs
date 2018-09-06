@@ -42,11 +42,6 @@ initialModel =
     Model "" [] 0 0 ""
 
 
--- opcodeAppend = 1 
--- opcodeDelete = 2 
--- opcodePrint  = 3
--- opcodeUndo   = 4 
-
 opCount_UpperLimit            = 1000000
 appendageLengthSum_UpperLimit = 1000000
 charDeleteCountSum_UpperLimit = 2000000
