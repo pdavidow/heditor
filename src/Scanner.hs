@@ -63,12 +63,16 @@ scanFile input output = do
                                 Right model -> do
                                     writeFile output $ _printOutput model
                                     pure ()
+
                                 Left err ->
                                     putStrLn err
+
                         Nothing -> do
                             putStrLn $ errorWithLineNum 2 "Operation expected" 
+
                 Nothing -> 
                     putStrLn $ errorWithLineNum 1 "Operation count expected" 
+
         Nothing -> do
             putStrLn $ errorWithLineNum 1 "Operation count expected" 
     
@@ -109,6 +113,7 @@ parseCleanOps acc (numberedLine : xs) =
         case eiOp of
             Right op ->
                 parseCleanOps (acc ++ [op]) xs
+
             Left err -> 
                 Left err
 
@@ -142,26 +147,26 @@ performOps model (op : xs) =
         Tagged_OpDelete (OpDelete charsToDelete_Count lineNum) ->
             let
                 sum = _charDeleteCountSum model + charsToDelete_Count
-                len = length $ _string model
                 appendage = unpack $ takeEnd charsToDelete_Count $ pack $ _string model
             in
                 if sum > charDeleteCountSum_UpperLimit then
                     Left $ errorWithLineNum lineNum $ "The total char delete count (for Delete) must be <= " ++ show charDeleteCountSum_UpperLimit ++ ", but instead is " ++ show sum
-                else if len == 0 then
-                    Left $ errorWithLineNum lineNum $ "String may not be empty"
-                else if charsToDelete_Count == 0 || charsToDelete_Count > len then
-                    Left $ errorWithLineNum lineNum $ "1 <= count <= string length"
-                else
-                    let
-                        model' =
-                            Model
-                                (shortenStringOnRight charsToDelete_Count $ _string model)
-                                (_undos model ++ [Model_OpUndoDelete $ OpUndoDelete appendage 0]) -- dummy lineNum
-                                (_appendageLengthSum model)
-                                sum
-                                (_printOutput model)
-                    in
-                        performOps model' xs
+                else 
+                    case basicDelete charsToDelete_Count lineNum model of
+                        Right model' -> 
+                            let                                
+                                model'' =
+                                    Model
+                                        (_string model')
+                                        (_undos model' ++ [Model_OpUndoDelete $ OpUndoDelete appendage 0]) -- dummy lineNum
+                                        (_appendageLengthSum model')
+                                        sum
+                                        (_printOutput model')
+                            in
+                                performOps model'' xs
+
+                        Left err -> 
+                            Left err
 
         Tagged_OpPrint (OpPrint pos lineNum) ->
                 case ((pos - 1) <= (length $ _string model)) of
@@ -190,10 +195,8 @@ performOps model (op : xs) =
                         tagged = case last $ _undos model of
                             Model_OpUndoAppend (OpUndoAppend x _) -> Tagged_OpUndoAppend (OpUndoAppend x lineNum)
                             Model_OpUndoDelete (OpUndoDelete x _) -> Tagged_OpUndoDelete (OpUndoDelete x lineNum)
-                        
-                        eiModel = performOps model [tagged]
                     in
-                        case eiModel of
+                        case performOps model [tagged] of
                             Right model' ->
                                 let 
                                     model'' = 
@@ -205,28 +208,17 @@ performOps model (op : xs) =
                                             (_printOutput model')        
                                 in
                                     performOps model'' xs
-                            Left _ ->
-                                eiModel
 
-        Tagged_OpUndoAppend (OpUndoAppend charsToDelete_Count lineNum) -> -- todo refactor w/ Tagged_OpDelete
-            let
-                len = length $ _string model
-            in
-                if len == 0 then
-                    Left $ errorWithLineNum lineNum $ "String may not be empty"
-                else if charsToDelete_Count == 0 || charsToDelete_Count > len then
-                    Left $ errorWithLineNum lineNum $ "1 <= count <= string length"
-                else
-                    let
-                        model' =
-                            Model
-                                (shortenStringOnRight charsToDelete_Count $ _string model)
-                                (_undos model)
-                                (_appendageLengthSum model)
-                                (_charDeleteCountSum model)
-                                (_printOutput model)
-                    in
-                        performOps model' xs
+                            Left err -> 
+                                Left err
+
+        Tagged_OpUndoAppend (OpUndoAppend charsToDelete_Count lineNum) ->
+            case basicDelete charsToDelete_Count lineNum model of
+                Right model' -> 
+                    performOps model' xs
+
+                Left err -> 
+                    Left err
 
         Tagged_OpUndoDelete (OpUndoDelete appendage lineNum) -> 
             let
@@ -309,10 +301,24 @@ parseOp (lineNum, line) = do
             Left $ errorWithLineNum lineNum "Operation type expected"     
 
 
-shortenStringOnRight :: Int -> String -> String
-shortenStringOnRight charCount string =
-    unpack $ dropEnd charCount $ pack string
-
+basicDelete :: Int -> LineNum -> Model -> Either String Model
+basicDelete charsToDelete_Count lineNum model =
+    let
+        len = length $ _string model
+    in
+        if len == 0 then
+            Left $ errorWithLineNum lineNum $ "String may not be empty"
+        else if charsToDelete_Count == 0 || charsToDelete_Count > len then
+            Left $ errorWithLineNum lineNum $ "1 <= count <= string length"
+        else
+            Right $ 
+                Model
+                    (unpack $ dropEnd charsToDelete_Count $ pack $ _string model)
+                    (_undos model)
+                    (_appendageLengthSum model)
+                    (_charDeleteCountSum model)
+                    (_printOutput model)    
+    
 
 errorWithLineNum :: Int -> String -> String
 errorWithLineNum lineNum error =
