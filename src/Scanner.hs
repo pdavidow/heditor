@@ -2,6 +2,7 @@ module Scanner
     ( scanFile
     )
     where
+        
 import Debug.Trace (trace, traceIO, traceM)
 import Safe (atMay, headMay, tailMay) 
 import Text.Read (readMaybe)
@@ -48,8 +49,8 @@ appendageLengthSum_UpperLimit = 1000000
 charDeleteCountSum_UpperLimit = 2000000
 
 
-scanFile :: FilePath -> FilePath -> IO ()
-scanFile input output = do
+scanFile :: FilePath -> IO (Either String String)
+scanFile input = do
     lines <- getLines input
     case headMay lines of
         Just h -> do
@@ -61,20 +62,19 @@ scanFile input output = do
                             let eiModel = parseOps opCount opLines
                             case eiModel of
                                 Right model -> do
-                                    writeFile output $ _printOutput model
-                                    pure ()
+                                    pure $ Right $ _printOutput model
 
                                 Left err ->
-                                    putStrLn err
+                                    pure $ Left err
 
                         Nothing -> do
-                            putStrLn $ errorWithLineNum 2 "Operation expected" 
+                            pure $ Left $ errorWithLineNum 2 "Operation expected" 
 
                 Nothing -> 
-                    putStrLn $ errorWithLineNum 1 "Operation count expected" 
+                    pure $ Left $ errorWithLineNum 1 "Operation count expected" 
 
         Nothing -> do
-            putStrLn $ errorWithLineNum 1 "Operation count expected" 
+            pure $ Left $ errorWithLineNum 1 "Operation count expected" 
     
 
 getLines :: FilePath -> IO [Line]

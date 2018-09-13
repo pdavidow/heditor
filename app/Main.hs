@@ -4,6 +4,10 @@ import Scanner (scanFile)
 
 main :: IO ()
 main = do
-    putStrLn "Enter Output file-path"
-    output <- getLine
-    scanFile "test/input/test_input_good_1.txt" output
+    result <- scanFile "test/input/test_input_good_1.txt" 
+    case result of
+        Left err ->
+            putStrLn $ "ERROR: " ++ err
+
+        Right output ->
+            putStrLn output
