@@ -18,7 +18,6 @@ In this challenge, you must implement a simple text editor. Initially, your edit
 The first line contains an integer, _Q_, denoting the number of operations. 
 Each line _i_ of the _Q_ subsequent lines (where 1 <= _i_ <= _Q_) defines an operation to be performed. Each operation starts with a single integer, _t_ (where _t_ is a member of set {1,2,3,4}), denoting a type of operation as defined in the _Problem Statement_ above. If the operation requires an argument, _t_ is followed by its space-separated argument. For example, if _t_ = 1 and _W_ = "abcd", line _i_ will be `1 abcd`.
 
-Input is from Standard IO.
 
 **Constraints**
 
@@ -33,7 +32,6 @@ Input is from Standard IO.
 
 Each operation of type 3 must print the *k*th character on a new line.
 
-Output is to Standard IO.
 
 **Sample Input**
 ````

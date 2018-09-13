@@ -21,6 +21,13 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- safe
+- text
+- MissingH
+- tasty
+- tasty-hunit
+- tasty-smallcheck
+- tasty-quickcheck
 
 library:
   source-dirs: src
@@ -35,12 +42,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - heditor
-    - safe
-    - text
-    - tasty
-    - tasty-hunit
-    - tasty-smallcheck
-    - tasty-quickcheck
 
 tests:
   heditor-test:

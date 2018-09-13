@@ -3,11 +3,13 @@ module Scanner
     )
     where
         
-import Debug.Trace (trace, traceIO, traceM)
+--import Debug.Trace (trace, traceIO, traceM)
 import Safe (atMay, headMay, tailMay) 
 import Text.Read (readMaybe)
 import Data.Text (dropEnd, pack, takeEnd, unpack)
-
+import Data.String.Utils (rstrip)
+import Data.Char (isAlpha, isLower)
+ 
 data OpAppend = OpAppend String LineNum deriving (Eq, Show)
 data OpDelete = OpDelete Int LineNum deriving (Eq, Show)
 data OpPrint = OpPrint Int LineNum deriving (Eq, Show)
@@ -81,7 +83,7 @@ getLines :: FilePath -> IO [Line]
 getLines x = do
     -- https://stackoverflow.com/questions/12288318/read-a-file-line-by-line
     contents <- readFile x -- lazy
-    pure $ lines contents    
+    pure $ lines $ rstrip contents    
 
 
 parseOps :: Int -> [Line] -> Either String Model
@@ -169,7 +171,7 @@ performOps model (op : xs) =
                             Left err
 
         Tagged_OpPrint (OpPrint pos lineNum) ->
-                case ((pos - 1) <= (length $ _string model)) of
+                case ((pos - 1) < (length $ _string model)) of
                     True ->
                         let
                             model' =
@@ -252,7 +254,12 @@ parseOp (lineNum, line) = do
                                 Just args ->                                    
                                     case length args == 1 of
                                         True -> do
-                                            Right $ Tagged_OpAppend $ OpAppend (head args) lineNum
+                                            let appendage = head args -- safe
+                                            case length appendage == (length $ filter (\x -> isAlpha x && isLower x) appendage) of
+                                                True -> 
+                                                    Right $ Tagged_OpAppend $ OpAppend appendage lineNum
+                                                False -> 
+                                                    Left $ errorWithLineNum lineNum "All input characters are lowercase English letters"  
                                         False ->
                                             Left $ errorWithLineNum lineNum "Append has one arg"  
                                 Nothing ->
