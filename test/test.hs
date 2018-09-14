@@ -52,10 +52,14 @@ unitTests = testGroup "Unit tests" $
             result <- scanFile "./test/input/test_input_bad_7.txt"
             result @?= (Left "Invalid operation type, line 2")
             pure ()    
-        , testCase "bad 8" $ do
-            result <- scanFile "./test/input/test_input_bad_8.txt"
+        , testCase "bad 8a" $ do
+            result <- scanFile "./test/input/test_input_bad_8a.txt"
             result @?= (Left "All input characters are lowercase English letters, line 2")
             pure ()   
+        , testCase "bad 8b" $ do
+            result <- scanFile "./test/input/test_input_bad_8b.txt"
+            result @?= (Left "All input characters are lowercase English letters, line 2")
+            pure ()             
         , testCase "bad 9" $ do
             result <- scanFile "./test/input/test_input_bad_9.txt"
             result @?= (Left "1 <= count <= string length, line 3")
@@ -66,11 +70,13 @@ unitTests = testGroup "Unit tests" $
             pure ()   
         , testCase "bad 11" $ do
             result <- scanFile "./test/input/test_input_bad_11.txt"
-            result @?= (Left "Operation count does not match actual, line 1")
+            result @?= (Left "Operation count must be a positive integer <= 1000000, line 1")
             pure ()  
         , testCase "bad 12" $ do
             result <- scanFile "./test/input/test_input_bad_12.txt"
             result @?= (Left "Char position for Print exceeds string length, line 14")
-            pure ()                                                                                                                  
+            pure ()     
+            
+        -- todo: Generate test files for testing constraints
         ]                  
     ]

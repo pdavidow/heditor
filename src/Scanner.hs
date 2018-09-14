@@ -88,21 +88,21 @@ getLines x = do
 
 parseOps :: Int -> [Line] -> Either String Model
 parseOps opCount xs = 
-    case opCount == length xs of
-        True -> 
-            let 
-                numberedLines = zip [(2 :: Int)..] xs 
-                eiOps = parseCleanOps [] numberedLines
-            in
-                case eiOps of
-                    Right ops ->
-                        performOps initialModel ops
+    if opCount > opCount_UpperLimit then
+        Left $ errorWithLineNum 1 $ "Operation count must be a positive integer <= " ++ show opCount_UpperLimit
+    else if opCount /= length xs then
+        Left $ errorWithLineNum 1 "Operation count does not match actual"
+    else
+        let 
+            numberedLines = zip [(2 :: Int)..] xs 
+            eiOps = parseCleanOps [] numberedLines
+        in
+            case eiOps of
+                Right ops ->
+                    performOps initialModel ops
 
-                    Left err -> do
-                        Left err
-
-        False -> do
-            Left $ errorWithLineNum 1 "Operation count does not match actual"          
+                Left err -> do
+                    Left err      
 
 
 parseCleanOps :: [Tagged_Operation] -> [(Int, Line)] -> Either String [Tagged_Operation]
