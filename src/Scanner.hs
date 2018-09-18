@@ -1,5 +1,8 @@
 module Scanner
     ( scanFile
+    , opCount_UpperLimit       
+    , appendageLengthSum_UpperLimit
+    , charDeleteCountSum_UpperLimit
     )
     where
         
@@ -144,7 +147,7 @@ performOps model (op : xs) =
                             performOps model' xs
 
                     False ->
-                        Left $ errorWithLineNum lineNum $ "The sum of the lengths of all appendage arguments (for Append) must be <= " ++ show appendageLengthSum_UpperLimit ++ ", but instead is " ++ show sum
+                        Left $ errorWithLineNum lineNum $ "Sum of lengths for all appendage args (optype 1) must be <= " ++ show appendageLengthSum_UpperLimit ++ " (actual " ++ show sum ++ ")"
         
         Tagged_OpDelete (OpDelete charsToDelete_Count lineNum) ->
             let

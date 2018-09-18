@@ -24,6 +24,7 @@ dependencies:
 - safe
 - text
 - MissingH
+- directory
 - tasty
 - tasty-hunit
 - tasty-smallcheck

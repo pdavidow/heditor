@@ -1,4 +1,4 @@
-**_Rewrite of SimpleEditor in Haskell_**
+**_Rewrite of SimpleEditor in Haskell_ (without using exceptions)**
 
 ==================================================
 
