@@ -6,7 +6,6 @@ module Scanner
     )
     where
         
---import Debug.Trace (trace, traceIO, traceM)
 import Safe (atMay, headMay, tailMay) 
 import Text.Read (readMaybe)
 import Data.Text (dropEnd, pack, takeEnd, unpack)
@@ -40,7 +39,7 @@ data Model = Model
     , _undos :: [Model_Undo]
     , _appendageLengthSum :: Int
     , _charDeleteCountSum :: Int
-    , _printOutput :: String
+    , _printOutput :: String -- todo: Print directly to file
     }
 
     
@@ -84,7 +83,6 @@ scanFile input = do
 
 getLines :: FilePath -> IO [Line]
 getLines x = do
-    -- https://stackoverflow.com/questions/12288318/read-a-file-line-by-line
     contents <- readFile x -- lazy
     pure $ lines $ rstrip contents    
 
@@ -241,7 +239,6 @@ performOps model (op : xs) =
                     performOps model' xs
 
 
--- todo refactor
 parseOp :: (Int, Line) -> Either String Tagged_Operation
 parseOp (lineNum, line) = do
     let tokens = words line 

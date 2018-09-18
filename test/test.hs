@@ -5,9 +5,8 @@ import Test.Tasty.HUnit
 
 import System.Directory (removeFile)
 import System.IO
-import Data.List (foldl1')
 
-import Scanner (scanFile, opCount_UpperLimit, appendageLengthSum_UpperLimit, charDeleteCountSum_UpperLimit)
+import Scanner (scanFile)
 import TestHelper ( genFile_exceed__appendageLengthSum_UpperLimit, genFile_exceed__charDeleteCountSum_UpperLimit)
   
 main = defaultMain tests

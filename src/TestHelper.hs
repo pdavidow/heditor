@@ -4,10 +4,8 @@ module TestHelper
     )
     where
  
-import Debug.Trace (trace, traceIO, traceM)
 import System.Directory (removeFile)
 import System.IO
-import Data.List (foldl1')
 
 import Scanner (scanFile, opCount_UpperLimit, appendageLengthSum_UpperLimit, charDeleteCountSum_UpperLimit)
 
