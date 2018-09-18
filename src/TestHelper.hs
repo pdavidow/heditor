@@ -43,7 +43,6 @@ genFile_exceed__charDeleteCountSum_UpperLimit filePath excess = do
     let deleteOp_CharCount3 = excess
 
     let opCount_Append = length appendages 
-    --traceIO $ "opCount_Append: " ++ show opCount_Append
     let opCount_Delete1 = opCount_Append
     let opCount_Undo = opCount_Delete1
     let opCount_Delete2 = opCount_Delete1

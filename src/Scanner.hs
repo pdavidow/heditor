@@ -54,7 +54,7 @@ appendageLengthSum_UpperLimit = 1000000
 charDeleteCountSum_UpperLimit = 2000000
 
 
-scanFile :: FilePath -> IO (Either String String)
+scanFile :: FilePath -> IO (Either String ())
 scanFile input = do
     lines <- getLines input
     case headMay lines of
@@ -64,10 +64,10 @@ scanFile input = do
                 Just opCount ->
                     case tailMay lines of
                         Just opLines -> do
-                            let eiModel = parseOps opCount opLines
+                            eiModel <- parseOps opCount opLines
                             case eiModel of
                                 Right model -> do
-                                    pure $ Right $ _printOutput model
+                                    pure $ Right ()
 
                                 Left err ->
                                     pure $ Left err
@@ -89,12 +89,12 @@ getLines x = do
     pure $ lines $ rstrip contents    
 
 
-parseOps :: Int -> [Line] -> Either String Model
+parseOps :: Int -> [Line] -> IO (Either String Model)
 parseOps opCount xs = 
     if opCount > opCount_UpperLimit then
-        Left $ errorWithLineNum 1 $ "Operation count must be a positive integer <= " ++ show opCount_UpperLimit
+        pure $ Left $ errorWithLineNum 1 $ "Operation count must be a positive integer <= " ++ show opCount_UpperLimit
     else if opCount /= length xs then
-        Left $ errorWithLineNum 1 "Operation count does not match actual"
+        pure $ Left $ errorWithLineNum 1 "Operation count does not match actual"
     else
         let 
             numberedLines = zip [(2 :: Int)..] xs 
@@ -105,7 +105,7 @@ parseOps opCount xs =
                     performOps initialModel ops
 
                 Left err -> do
-                    Left err      
+                    pure $ Left err      
 
 
 parseCleanOps :: [Tagged_Operation] -> [(Int, Line)] -> Either String [Tagged_Operation]
@@ -123,9 +123,9 @@ parseCleanOps acc (numberedLine : xs) =
                 Left err
 
 
-performOps :: Model -> [Tagged_Operation] -> Either String Model
+performOps :: Model -> [Tagged_Operation] -> IO (Either String Model)
 performOps model [] =
-    Right model
+    pure $ Right model
 performOps model (op : xs) =
     case op of
         Tagged_OpAppend (OpAppend appendage lineNum) ->
@@ -147,7 +147,7 @@ performOps model (op : xs) =
                             performOps model' xs
 
                     False ->
-                        Left $ errorWithLineNum lineNum $ "Sum of lengths for all appendage args (optype 1) must be <= " ++ show appendageLengthSum_UpperLimit ++ " (actual " ++ show sum ++ ")"
+                        pure $ Left $ errorWithLineNum lineNum $ "Sum of lengths for all appendage args (optype 1) must be <= " ++ show appendageLengthSum_UpperLimit ++ " (actual " ++ show sum ++ ")"
         
         Tagged_OpDelete (OpDelete charsToDelete_Count lineNum) ->
             let
@@ -155,7 +155,7 @@ performOps model (op : xs) =
                 appendage = unpack $ takeEnd charsToDelete_Count $ pack $ _string model
             in
                 if sum > charDeleteCountSum_UpperLimit then
-                    Left $ errorWithLineNum lineNum $ "The total char delete count (for Delete) must be <= " ++ show charDeleteCountSum_UpperLimit ++ ", but instead is " ++ show sum
+                    pure $ Left $ errorWithLineNum lineNum $ "The total char delete count (for Delete) must be <= " ++ show charDeleteCountSum_UpperLimit ++ ", but instead is " ++ show sum
                 else 
                     case basicDelete charsToDelete_Count lineNum model of
                         Right model' -> 
@@ -171,7 +171,7 @@ performOps model (op : xs) =
                                 performOps model'' xs
 
                         Left err -> 
-                            Left err
+                            pure $ Left err
 
         Tagged_OpPrint (OpPrint pos lineNum) ->
                 case ((pos - 1) < (length $ _string model)) of
@@ -188,7 +188,7 @@ performOps model (op : xs) =
                             performOps model' xs
 
                     False ->
-                        Left $ errorWithLineNum lineNum $ "Char position for Print exceeds string length"
+                        pure $ Left $ errorWithLineNum lineNum $ "Char position for Print exceeds string length"
 
         Tagged_OpUndo (OpUndo lineNum) ->
             case null $ _undos model of
@@ -215,7 +215,7 @@ performOps model (op : xs) =
                                     performOps model'' xs
 
                             Left err -> 
-                                Left err
+                                pure $ Left err
 
         Tagged_OpUndoAppend (OpUndoAppend charsToDelete_Count lineNum) ->
             case basicDelete charsToDelete_Count lineNum model of
@@ -223,7 +223,7 @@ performOps model (op : xs) =
                     performOps model' xs
 
                 Left err -> 
-                    Left err
+                    pure $ Left err
 
         Tagged_OpUndoDelete (OpUndoDelete appendage lineNum) -> 
             let
