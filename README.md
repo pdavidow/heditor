@@ -1,5 +1,7 @@
 **_Rewrite of SimpleEditor in Haskell_ (without using exceptions)**
 
+stack test
+
 ==================================================
 
 **THE PROBLEM**
