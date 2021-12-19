@@ -6,11 +6,13 @@ module Scanner
     )
     where
         
-import Safe (atMay, headMay, tailMay) 
-import Text.Read (readMaybe)
-import Data.Text (dropEnd, pack, takeEnd, unpack)
-import Data.String.Utils (rstrip)
-import Data.Char (isAlpha, isLower)
+import           Control.Monad.IO.Class (MonadIO)        
+import           Control.Monad.Trans.Except (ExceptT(..), except , runExceptT)        
+import           Data.Char (isAlpha, isLower)
+import           Data.String.Utils (rstrip)
+import           Data.Text (dropEnd, pack, takeEnd, unpack)
+import           Safe (atMay, headMay, tailMay) 
+import           Text.Read (readMaybe)
 
 
 data OpAppend = OpAppend String LineNum deriving (Eq, Show)
@@ -55,8 +57,8 @@ appendageLengthSum_UpperLimit = 1000000
 charDeleteCountSum_UpperLimit = 2000000
 
 
-scanFile :: FilePath -> FilePath -> IO (Either ErrorMsg ())
-scanFile input output = do
+scanFile :: MonadIO m => FilePath -> FilePath -> m (Either ErrorMsg ())
+scanFile input output = runExceptT $ do
     lines <- getLines input
     case headMay lines of
         Just h -> do
@@ -68,28 +70,28 @@ scanFile input output = do
                             eiModel <- parseOps output opCount opLines
                             case eiModel of
                                 Right model -> do
-                                    pure $ Right ()
+                                    except $ Right ()
 
                                 Left err ->
-                                    pure $ Left err
+                                    except $ Left err
 
                         Nothing -> do
-                            pure $ Left $ errorWithLineNum 2 "Operation expected" 
+                            except $ Left $ errorWithLineNum 2 "Operation expected" 
 
                 Nothing -> 
-                    pure $ Left $ errorWithLineNum 1 "Operation count expected" 
+                    except $ Left $ errorWithLineNum 1 "Operation count expected" 
 
         Nothing -> do
-            pure $ Left $ errorWithLineNum 1 "Operation count expected" 
+            except $ Left $ errorWithLineNum 1 "Operation count expected" 
     
 
-getLines :: FilePath -> IO [Line]
+getLines :: MonadIO m => FilePath -> m [Line]
 getLines x = do
     contents <- readFile x -- lazy
     pure $ lines $ rstrip contents    
 
 
-parseOps :: FilePath -> Int -> [Line] -> IO (Either ErrorMsg Model)
+parseOps :: MonadIO m => FilePath -> Int -> [Line] -> m (Either ErrorMsg Model)
 parseOps output opCount xs = 
     if opCount > opCount_UpperLimit then
         pure $ Left $ errorWithLineNum 1 $ "Operation count must be a positive integer <= " ++ show opCount_UpperLimit
@@ -195,7 +197,7 @@ parseOp (lineNum, line) = do
             Left $ errorWithLineNum lineNum "Operation type expected"       
     
 
-performOps :: Model -> [Tagged_Op] -> IO (Either ErrorMsg Model)
+performOps :: MonadIO m => Model -> [Tagged_Op] -> m (Either ErrorMsg Model)
 performOps model [] =
     pure $ Right model
 
