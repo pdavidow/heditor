@@ -6,13 +6,13 @@ module Scanner
     )
     where
         
---import Debug.Trace (trace, traceIO, traceM)
 import Safe (atMay, headMay, tailMay) 
 import Text.Read (readMaybe)
 import Data.Text (dropEnd, pack, takeEnd, unpack)
 import Data.String.Utils (rstrip)
 import Data.Char (isAlpha, isLower)
- 
+
+
 data OpAppend = OpAppend String LineNum deriving (Eq, Show)
 data OpDelete = OpDelete Int LineNum deriving (Eq, Show)
 data OpPrint = OpPrint Int LineNum deriving (Eq, Show)
